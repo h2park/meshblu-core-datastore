@@ -22,6 +22,7 @@
   "homepage": "https://github.com/octoblu/meshblu-core-datastore#readme",
   "devDependencies": {
     "chai": "^3.4.0",
+    "chai-subset": "^1.1.0",
     "coffee-coverage": "^0.6.3",
     "coffee-script": "^1.10.0",
     "istanbul": "^0.4.0",
@@ -29,5 +30,9 @@
     "mocha-istanbul": "^0.2.0",
     "sinon": "^1.17.2",
     "sinon-chai": "^2.8.0"
+  },
+  "dependencies": {
+    "lodash": "^3.10.1",
+    "mongojs": "^1.4.1"
   }
 }
