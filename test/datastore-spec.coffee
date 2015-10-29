@@ -1,17 +1,12 @@
 mongojs   = require 'mongojs'
 Datastore = require '../src/datastore'
-redis     = require 'fakeredis'
 
 describe 'Datastore', ->
-  beforeEach ->
-    @cache = redis.createClient()
-
   describe '->find', ->
     beforeEach (done) ->
       @sut = new Datastore
         database:   'datastore-find-test'
         collection: 'things'
-        cache: @cache
 
       @db = mongojs 'datastore-find-test', ['things']
       @db.things.remove done
@@ -53,7 +48,6 @@ describe 'Datastore', ->
       @sut = new Datastore
         database:   'datastore-findOne-test'
         collection: 'things'
-        cache: @cache
 
       @db = mongojs 'datastore-findOne-test', ['things']
       @db.things.remove done
@@ -80,35 +74,11 @@ describe 'Datastore', ->
       it 'should yield a non extant record', ->
         expect(@result).not.to.exist
 
-    describe 'using the cache', ->
-      beforeEach (done) ->
-        record =
-          uuid: 'absolute-zero'
-          byline: 'nowhere to go but up'
-        @db.things.insert record, done
-
-      describe 'when the cache is warmed up', ->
-        beforeEach (done) ->
-          @sut.findOne uuid: 'absolute-zero', done
-
-        describe 'when the persistent store is wiped out-of-band', ->
-          beforeEach (done) ->
-            @db.things.remove done
-
-          beforeEach (done) ->
-            @sut.findOne uuid: 'absolute-zero', (error, @result) => done error
-
-          it 'should yield the cached record', ->
-            expect(@result).to.deep.equal
-              uuid: 'absolute-zero'
-              byline: 'nowhere to go but up'
-
   describe '->insert', ->
     beforeEach (done) ->
       @sut = new Datastore
         database:   'datastore-insert-test'
         collection: 'jalapenos'
-        cache: @cache
 
       @db = mongojs 'datastore-insert-test', ['jalapenos']
       @db.jalapenos.remove done
@@ -131,49 +101,11 @@ describe 'Datastore', ->
             token: 'Duck, duck, DEAD'
           done()
 
-  describe '->insertIntoCache', ->
-    beforeEach (done) ->
-      @sut = new Datastore
-        database:   'datastore-insert-cache-only-test'
-        collection: 'jets'
-        cache: @cache
-
-      @db = mongojs 'datastore-insert-cache-only-test', ['jets']
-      @db.jets.remove done
-
-    describe 'when called with something', ->
-      beforeEach (done) ->
-        record =
-          uuid: 'shot-out-of-cannon'
-          byline: 'never trust a clown'
-
-        @sut.insertIntoCache 'shot-out-of-cannon', record, (error, @result) => done error
-
-      it 'should pass through the record', ->
-        expect(@result).to.deep.equal
-          uuid: 'shot-out-of-cannon'
-          byline: 'never trust a clown'
-
-      it 'should be retrievable using findOne', (done) ->
-        @sut.findOne uuid: 'shot-out-of-cannon', (error, record) ->
-          return done error if error?
-          expect(record).to.deep.equal
-            uuid: 'shot-out-of-cannon'
-            byline: 'never trust a clown'
-          done()
-
-      it 'should not be in the database', (done) ->
-        @db.jets.findOne uuid: 'shot-out-of-cannon', (error, record) ->
-          return done error if error?
-          expect(record).not.to.exist
-          done()
-
   describe '->remove', ->
     beforeEach (done) ->
       @sut = new Datastore
         database:   'datastore-remove-test'
         collection: 'things'
-        cache: @cache
 
       @db = mongojs 'datastore-remove-test', ['things']
       @db.things.remove done
