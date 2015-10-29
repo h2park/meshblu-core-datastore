@@ -8,10 +8,10 @@ describe 'Datastore', ->
     beforeEach (done) ->
       @sut = new Datastore
         database:   'datastore-insert-test'
-        collection: 'devices'
+        collection: 'jalapenos'
 
-      @db = mongojs 'datastore-insert-test', ['devices']
-      @db.devices.remove done
+      @db = mongojs 'datastore-insert-test', ['jalapenos']
+      @db.jalapenos.remove done
 
     describe 'when called with an object', ->
       beforeEach (done) ->
@@ -24,7 +24,7 @@ describe 'Datastore', ->
         expect(JSON.stringify @result).not.to.exist
 
       it 'should store the thing', (done) ->
-        @db.devices.findOne uuid: 'goose', (error, record) =>
+        @db.jalapenos.findOne uuid: 'goose', (error, record) =>
           return done error if error?
           expect(record).to.containSubset
             uuid: 'goose'

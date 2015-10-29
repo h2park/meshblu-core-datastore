@@ -11,7 +11,7 @@ class Datastore
       callback error, record
 
   insert: (record, callback) =>
-    @db.devices.insert record, (error, ignored) =>
+    @db[@collection].insert record, (error, ignored) =>
       callback error
 
 module.exports = Datastore
