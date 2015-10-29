@@ -19,4 +19,7 @@ class Datastore
     @db[@collection].insert record, (error, ignored) =>
       callback error
 
+  remove: =>
+    @db[@collection].remove.apply @db[@collection], arguments
+
 module.exports = Datastore
