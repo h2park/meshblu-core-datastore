@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "coffee-script": "^1.10.0",
+    "fakeredis": "^0.3.4",
     "lodash": "^3.10.1",
     "mongojs": "^1.4.1"
   }
