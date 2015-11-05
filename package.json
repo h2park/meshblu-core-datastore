@@ -1,6 +1,6 @@
 {
   "name": "meshblu-core-datastore",
-  "version": "1.0.6",
+  "version": "2.0.0",
   "description": "Meshblu Datastore",
   "main": "index.js",
   "scripts": {
@@ -27,12 +27,12 @@
     "istanbul": "^0.4.0",
     "mocha": "^2.3.3",
     "mocha-istanbul": "^0.2.0",
+    "mongojs": "^1.4.1",
     "sinon": "^1.17.2",
     "sinon-chai": "^2.8.0"
   },
   "dependencies": {
     "coffee-script": "^1.10.0",
-    "lodash": "^3.10.1",
-    "mongojs": "^1.4.1"
+    "lodash": "^3.10.1"
   }
 }
