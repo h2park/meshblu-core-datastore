@@ -140,6 +140,36 @@ describe 'Datastore', ->
             expect(count).to.equal 0
             done()
 
+  describe '->update', ->
+    beforeEach (done) ->
+      @sut = new Datastore
+        database:   mongojs('datastore-update-test')
+        collection: 'nails'
+
+      @db = mongojs 'datastore-update-test', ['nails']
+      @db.nails.remove done
+
+    describe 'when an object exists', ->
+      beforeEach (done) ->
+        @db.nails.insert uuid: 'hardware', byline: 'Does it grate?', done
+
+      describe 'when called with an object', ->
+        beforeEach (done) ->
+          query  = uuid: 'hardware'
+          update = $set: {byline: 'Lee Press-Ons?'}
+          @sut.update query, update, (error, @result) => done error
+
+        it 'should yield the number of records updated', ->
+          expect(@result).to.containSubset n: 1
+
+        it 'should update the thing', (done) ->
+          @db.nails.findOne uuid: 'hardware', (error, record) =>
+            return done error if error?
+            expect(record).to.containSubset
+              uuid: 'hardware'
+              byline: 'Lee Press-Ons?'
+            done()
+
   describe 'when find is called an ubsurd number of times', ->
     beforeEach (done) ->
       db = mongojs('datastore-find-test')
