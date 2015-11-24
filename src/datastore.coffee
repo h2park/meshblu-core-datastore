@@ -21,7 +21,7 @@ class Datastore
   remove: =>
     @db.remove.apply @db, arguments
 
-  update: (query, update, callback) =>
-    @db.update query, update, callback
+  update: (args...) =>
+    @db.update args...
 
 module.exports = Datastore
