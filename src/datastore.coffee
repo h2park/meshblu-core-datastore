@@ -5,14 +5,11 @@ class Datastore
     @db = database.collection collection
 
   find: (query, callback) =>
-    @db.find query, (error, records) =>
-      records = _.map records, (record) => _.omit record, '_id'
-      callback error, records
+    cursor = @db.find query, _id: false
+    _.defer => cursor.toArray callback
 
   findOne: (query, callback) =>
-    @db.findOne query, (error, record) =>
-      record = _.omit(record, '_id') if record?
-      return callback error, record
+    @db.findOne query, _id: false, callback
 
   insert: (record, callback) =>
     @db.insert record, (error, ignored) =>
