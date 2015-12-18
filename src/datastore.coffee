@@ -7,6 +7,7 @@ class Datastore
   find: (query, callback) =>
     cursor = @db.find query, _id: false
     _.defer => cursor.toArray callback
+    return cursor
 
   findOne: (query, callback) =>
     @db.findOne query, _id: false, callback
