@@ -37,6 +37,30 @@ describe 'Datastore', ->
             {uuid: 'marshmellow', type: 'campfire', token: 'How long can you hold your hand in the fire?'}
           ]
 
+    describe 'with a projection', ->
+      beforeEach (done) ->
+        record =
+          uuid: 'wood'
+          type: 'campfire'
+          token: 'I bet you can\'t jump over it'
+        @db.things.insert record, done
+
+      beforeEach (done) ->
+        record =
+          uuid: 'marshmellow'
+          type: 'campfire'
+          token: 'How long can you hold your hand in the fire?'
+        @db.things.insert record, done
+
+      describe 'when find is called', ->
+        beforeEach (done) ->
+          @sut.find {type: 'campfire'}, {type: true, uuid: true}, (error, @result) => done error
+
+        it 'should yield the record without mongo stuff', ->
+          expect(@result).to.deep.equal [
+            {uuid: 'wood', type: 'campfire'}
+            {uuid: 'marshmellow', type: 'campfire'}
+          ]
 
     describe 'when there exists no thing', ->
       beforeEach (done) ->
@@ -76,6 +100,20 @@ describe 'Datastore', ->
 
       it 'should yield a non extant record', ->
         expect(@result).not.to.exist
+
+    describe 'on with projection', ->
+      beforeEach (done) ->
+        record =
+          uuid: 'sandbag'
+          token: 'This’ll hold that pesky tsunami!'
+        @db.things.insert record, done
+
+      beforeEach (done) ->
+        @sut.findOne {uuid: 'sandbag'}, {token: false}, (error, @result) => done error
+
+      it 'should yield the record without mongo stuff', ->
+        expect(@result).to.deep.equal
+          uuid: 'sandbag'
 
   describe '->insert', ->
     beforeEach (done) ->

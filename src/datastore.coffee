@@ -4,13 +4,28 @@ class Datastore
   constructor: ({database,collection}) ->
     @db = database.collection collection
 
-  find: (query, callback) =>
-    cursor = @db.find query, _id: false
+  find: (query, projection, callback) =>
+    if _.isFunction projection
+      callback ?= projection
+      projection = undefined
+
+    projection ?= {}
+    projection._id = false
+
+    cursor = @db.find query, projection
+
     _.defer => cursor.toArray callback
     return cursor
 
-  findOne: (query, callback) =>
-    @db.findOne query, _id: false, callback
+  findOne: (query, projection, callback) =>
+    if _.isFunction projection
+      callback ?= projection
+      projection = undefined
+
+    projection ?= {}
+    projection._id = false
+
+    @db.findOne query, projection, callback
 
   insert: (record, callback) =>
     @db.insert record, (error, ignored) =>
