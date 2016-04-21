@@ -1,31 +1,42 @@
 mongojs   = require 'mongojs'
 async     = require 'async'
 Datastore = require '../src/datastore'
+Cache     = require 'meshblu-core-cache'
+redis     = require 'fakeredis'
+RedisNS   = require '@octoblu/redis-ns'
+UUID      = require 'uuid'
 
 describe 'Datastore', ->
+  beforeEach (done) ->
+    redisKey = UUID.v4()
+    client = new RedisNS 'datastore:test:things', redis.createClient redisKey
+    cache = new Cache {client}
+    @redis = new RedisNS 'datastore:test:things', redis.createClient redisKey
+
+    @sut = new Datastore
+      database:   mongojs('datastore-test')
+      collection: 'things'
+      cache: cache
+      cacheAttributes: ['uuid']
+
+    @db = mongojs 'datastore-test', ['things']
+    @db.things.remove done
+
   describe '->find', ->
-    beforeEach (done) ->
-      @sut = new Datastore
-        database:   mongojs('datastore-find-test')
-        collection: 'things'
-
-      @db = mongojs 'datastore-find-test', ['things']
-      @db.things.remove done
-
     describe 'when there exists a thing', ->
       beforeEach (done) ->
         record =
           uuid: 'wood'
           type: 'campfire'
           token: 'I bet you can\'t jump over it'
-        @db.things.insert record, done
+        @sut.insert record, done
 
       beforeEach (done) ->
         record =
           uuid: 'marshmellow'
           type: 'campfire'
           token: 'How long can you hold your hand in the fire?'
-        @db.things.insert record, done
+        @sut.insert record, done
 
       describe 'when find is called', ->
         beforeEach (done) ->
@@ -43,14 +54,14 @@ describe 'Datastore', ->
           uuid: 'wood'
           type: 'campfire'
           token: 'I bet you can\'t jump over it'
-        @db.things.insert record, done
+        @sut.insert record, done
 
       beforeEach (done) ->
         record =
           uuid: 'marshmellow'
           type: 'campfire'
           token: 'How long can you hold your hand in the fire?'
-        @db.things.insert record, done
+        @sut.insert record, done
 
       describe 'when find is called', ->
         beforeEach (done) ->
@@ -71,20 +82,12 @@ describe 'Datastore', ->
         expect(@result).to.be.array
 
   describe '->findOne', ->
-    beforeEach (done) ->
-      @sut = new Datastore
-        database:   mongojs('datastore-findOne-test')
-        collection: 'things'
-
-      @db = mongojs 'datastore-findOne-test', ['things']
-      @db.things.remove done
-
     describe 'on a record that exists', ->
       beforeEach (done) ->
         record =
           uuid: 'sandbag'
           token: 'This’ll hold that pesky tsunami!'
-        @db.things.insert record, done
+        @sut.insert record, done
 
       beforeEach (done) ->
         @sut.findOne uuid: 'sandbag', (error, @result) => done error
@@ -93,6 +96,23 @@ describe 'Datastore', ->
         expect(@result).to.deep.equal
           uuid: 'sandbag'
           token: 'This’ll hold that pesky tsunami!'
+
+      it 'should add to the cache', (done) ->
+        @redis.hget '779f48bb3d0177cb8c61d78e3c0899a5157cdcbd', 'cfc702c2d593c0667981e3220a271912e456fe61', (error, data) =>
+          return done error if error?
+          expect(JSON.parse data).to.deep.equal uuid: 'sandbag', token: 'This’ll hold that pesky tsunami!'
+          done()
+
+    describe 'record is already cached', ->
+      beforeEach (done) ->
+        @redis.hset '779f48bb3d0177cb8c61d78e3c0899a5157cdcbd', 'cfc702c2d593c0667981e3220a271912e456fe61', JSON.stringify('hi': 'there'), done
+
+      beforeEach (done) ->
+        @sut.findOne uuid: 'sandbag', (error, @result) => done error
+
+      it 'should yield the record without mongo stuff', ->
+        expect(@result).to.deep.equal
+          hi: 'there'
 
     describe 'on a record that does not exist', ->
       beforeEach (done) ->
@@ -106,7 +126,7 @@ describe 'Datastore', ->
         record =
           uuid: 'sandbag'
           token: 'This’ll hold that pesky tsunami!'
-        @db.things.insert record, done
+        @sut.insert record, done
 
       beforeEach (done) ->
         @sut.findOne {uuid: 'sandbag'}, {token: false}, (error, @result) => done error
@@ -115,15 +135,35 @@ describe 'Datastore', ->
         expect(@result).to.deep.equal
           uuid: 'sandbag'
 
+      it 'should cache the projection', (done) ->
+        @redis.hget '779f48bb3d0177cb8c61d78e3c0899a5157cdcbd', '18ba252583142b0a3a85fc47f56852630f8dfb5c', (error, data) =>
+          return done error if error?
+          expect(JSON.parse data).to.deep.equal uuid: 'sandbag'
+          done()
+
+    describe 'with a different projection', ->
+      beforeEach (done) ->
+        record =
+          uuid: 'sandbag'
+          token: 'This’ll hold that pesky tsunami!'
+          spork: 'bork'
+        @sut.insert record, done
+
+      beforeEach (done) ->
+        @sut.findOne {uuid: 'sandbag'}, {uuid: true, spork: true}, (error, @result) => done error
+
+      it 'should yield the record without mongo stuff', ->
+        expect(@result).to.deep.equal
+          uuid: 'sandbag'
+          spork: 'bork'
+
+      it 'should cache the projection', (done) ->
+        @redis.hget '779f48bb3d0177cb8c61d78e3c0899a5157cdcbd', '3b71f93def87ecb1fc0f44eda7e588a3cd4eef95', (error, data) =>
+          return done error if error?
+          expect(JSON.parse data).to.deep.equal uuid: 'sandbag', spork: 'bork'
+          done()
+
   describe '->insert', ->
-    beforeEach (done) ->
-      @sut = new Datastore
-        database:   mongojs('datastore-insert-test')
-        collection: 'jalapenos'
-
-      @db = mongojs 'datastore-insert-test', ['jalapenos']
-      @db.jalapenos.remove done
-
     describe 'when called with an object', ->
       beforeEach (done) ->
         record =
@@ -135,7 +175,7 @@ describe 'Datastore', ->
         expect(@result).not.to.exist
 
       it 'should store the thing', (done) ->
-        @db.jalapenos.findOne uuid: 'goose', (error, record) =>
+        @sut.findOne uuid: 'goose', (error, record) =>
           return done error if error?
           expect(record).to.containSubset
             uuid: 'goose'
@@ -144,78 +184,55 @@ describe 'Datastore', ->
 
   describe '->remove', ->
     beforeEach (done) ->
-      @sut = new Datastore
-        database:   mongojs('datastore-remove-test')
-        collection: 'things'
-
-      @db = mongojs 'datastore-remove-test', ['things']
-      @db.things.remove done
+      @redis.hset 'sandbag', 'foo', 'bar', done
 
     describe 'when there exists a thing', ->
       beforeEach (done) ->
         record =
           uuid: 'sandbag'
           token: 'This’ll hold that pesky tsunami!'
-        @db.things.insert record, done
+        @sut.insert record, done
 
-      describe 'when called with an open query and options', ->
+      describe 'when called with a query', ->
         beforeEach (done) ->
-          @sut.remove {}, {}, done
+          @sut.remove uuid: 'sandbag', done
 
-        it 'should empty the collection', (done) ->
-          @db.things.count {}, (error, count) =>
+        it 'should remove the record', (done) ->
+          @sut.findOne uuid: 'sandbag', (error, device) =>
             return done error if error?
-            expect(count).to.equal 0
+            expect(device).not.to.exist
             done()
 
-      describe 'when called with an no query or options', ->
-        beforeEach (done) ->
-          @sut.remove done
-
-        it 'should empty the collection', (done) ->
-          @db.things.count {}, (error, count) =>
+        it 'should clear the cache', (done) ->
+          @redis.exists '779f48bb3d0177cb8c61d78e3c0899a5157cdcbd', (error, exists) =>
             return done error if error?
-            expect(count).to.equal 0
+            expect(exists).to.equal 0
             done()
 
   describe '->update', ->
-    beforeEach (done) ->
-      @sut = new Datastore
-        database:   mongojs('datastore-update-test')
-        collection: 'nails'
-
-      @db = mongojs 'datastore-update-test', ['nails']
-      @db.nails.remove done
-
     describe 'when an object exists', ->
       beforeEach (done) ->
-        @db.nails.insert uuid: 'hardware', byline: 'Does it grate?', done
+        @redis.hset '9f0f2e3f4d49c05e64727e8993f152f775e1f317', 'foo', 'bar', done
+
+      beforeEach (done) ->
+        @sut.insert uuid: 'hardware', byline: 'Does it grate?', done
 
       describe 'when called with an object', ->
         beforeEach (done) ->
           query  = uuid: 'hardware'
           update = $set: {byline: 'Lee Press-Ons?'}
-          @sut.update query, update, (error, @result) => done error
-
-        it 'should yield the number of records updated', ->
-          expect(@result).to.containSubset n: 1
+          @sut.update query, update, (error) => done error
 
         it 'should update the thing', (done) ->
-          @db.nails.findOne uuid: 'hardware', (error, record) =>
+          @sut.findOne uuid: 'hardware', (error, record) =>
             return done error if error?
             expect(record).to.containSubset
               uuid: 'hardware'
               byline: 'Lee Press-Ons?'
             done()
 
-  describe 'when find is called an ubsurd number of times', ->
-    beforeEach (done) ->
-      db = mongojs('datastore-find-test')
-      async.times 175, (i, callback) =>
-        sut = new Datastore
-          database:   db
-          collection: 'things'
-        sut.find type: 'campfire', callback
-      , done
-
-    it 'should probably work ok', ->
+        it 'should clear the cache', (done) ->
+          @redis.exists '9f0f2e3f4d49c05e64727e8993f152f775e1f317', (error, exists) =>
+            return done error if error?
+            expect(exists).to.equal 0
+            done()
