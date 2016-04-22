@@ -67,7 +67,9 @@ class Datastore
     cacheKey   = @_generateCacheKey {query}
     return callback() unless cacheKey?
     cacheField = @_generateCacheField {query, projection}
-    @cache.hset cacheKey, cacheField, JSON.stringify(data), callback
+    @cache.hset cacheKey, cacheField, JSON.stringify(data), (error) =>
+      return callback error if error?
+      @cache.expire cacheKey, 60 * 60 * 1000, callback
 
   _clearCacheRecord: ({query}, callback) =>
     cacheKey = @_generateCacheKey {query}
