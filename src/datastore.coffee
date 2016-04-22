@@ -23,14 +23,18 @@ class Datastore
     projection ?= {}
     projection._id = false
 
-    @_findCacheRecords {query, projection}, (error, data) =>
+    @db.find query, projection, options, (error, data) =>
       return callback error if error?
-      return callback null, data if data?
-      @db.find query, projection, options, (error, data) =>
-        return callback error if error?
-        @_updateCacheRecords {query, projection, data}, (error) =>
-          return callback error if error?
-          callback null, data
+      callback null, data
+      
+    # @_findCacheRecords {query, projection}, (error, data) =>
+    #   return callback error if error?
+    #   return callback null, data if data?
+    #   @db.find query, projection, options, (error, data) =>
+    #     return callback error if error?
+    #     @_updateCacheRecords {query, projection, data}, (error) =>
+    #       return callback error if error?
+    #       callback null, data
 
   findOne: (query, projection, callback) =>
     if _.isFunction projection
@@ -121,7 +125,7 @@ class Datastore
 
   _updateCacheRecord: ({query, projection, data}, callback) =>
     return callback() unless @cache
-    cacheKey   = @_generateCacheKey {query}
+    cacheKey = @_generateCacheKey {query}
     return callback() unless cacheKey?
     cacheField = @_generateCacheField {query, projection}
     @cache.hset cacheKey, cacheField, JSON.stringify(data), (error) =>
@@ -134,10 +138,11 @@ class Datastore
     return callback() unless @cache
     records = {}
     async.eachSeries data, (record, done) =>
-      recordCacheKey = @_generateCacheKey {query: record}
-      recordCacheField = @_generateCacheField {query: record, projection}
+      attributes = _.pick record, @cacheAttributes
+      recordCacheKey = @_generateCacheKey {query: attributes}
+      recordCacheField = @_generateCacheField {query: attributes, projection: projection}
       records[recordCacheKey] = recordCacheField if recordCacheKey?
-      @_updateCacheRecord {query: record, projection, data: record}, done
+      @_updateCacheRecord {query: attributes, projection: projection, data: record}, done
     , (error) =>
       return callback error if error?
       return callback() if _.isEmpty records
