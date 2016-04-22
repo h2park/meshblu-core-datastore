@@ -48,6 +48,72 @@ describe 'Datastore', ->
             {uuid: 'marshmellow', type: 'campfire', token: 'How long can you hold your hand in the fire?'}
           ]
 
+        it 'should add to the search cache', (done) ->
+          @redis.get 'b098a0f435aa7818a057fc4aa21aa0775e74a09e', (error, data) =>
+            return done error if error?
+            expect(JSON.parse data).to.deep.equal {
+              '3205fe0fa790bfe1039f95ba0bba03eec1faa05c': '30f087a9660c39a36cc66cb0e8563f8f5a437bb0'
+              '9c77a994790ddf88bc197b11091643662c999a30': 'd3eea2b92d181957905932ada3c7366d98a316c1'
+            }
+            done()
+
+        it 'should add to the cache', (done) ->
+          @redis.hget '3205fe0fa790bfe1039f95ba0bba03eec1faa05c', '30f087a9660c39a36cc66cb0e8563f8f5a437bb0', (error, data) =>
+            return done error if error?
+            expect(JSON.parse data).to.deep.equal uuid: 'wood', type: 'campfire', token: 'I bet you can\'t jump over it'
+            done()
+
+        it 'should add the other to the cache', (done) ->
+          @redis.hget '9c77a994790ddf88bc197b11091643662c999a30', 'd3eea2b92d181957905932ada3c7366d98a316c1', (error, data) =>
+            return done error if error?
+            expect(JSON.parse data).to.deep.equal uuid: 'marshmellow', type: 'campfire', token: 'How long can you hold your hand in the fire?'
+            done()
+
+    describe 'when a record is already cached', ->
+      beforeEach (done) ->
+        data =
+          '3205fe0fa790bfe1039f95ba0bba03eec1faa05c': '30f087a9660c39a36cc66cb0e8563f8f5a437bb0'
+          '9c77a994790ddf88bc197b11091643662c999a30': 'd3eea2b92d181957905932ada3c7366d98a316c1'
+
+        @redis.set 'b098a0f435aa7818a057fc4aa21aa0775e74a09e', JSON.stringify(data), done
+
+      beforeEach (done) ->
+        data = uuid: 'wood', type: 'campfire', token: 'I bet you can\'t jump over it'
+        @redis.hset '3205fe0fa790bfe1039f95ba0bba03eec1faa05c', '30f087a9660c39a36cc66cb0e8563f8f5a437bb0', JSON.stringify(data), done
+
+      beforeEach (done) ->
+        data = uuid: 'marshmellow', type: 'campfire', token: 'How long can you hold your hand in the fire?'
+        @redis.hset '9c77a994790ddf88bc197b11091643662c999a30', 'd3eea2b92d181957905932ada3c7366d98a316c1', JSON.stringify(data), done
+
+      context 'when all the records exist', ->
+        beforeEach (done) ->
+          @sut.find type: 'campfire', (error, @result) => done error
+
+        it 'should yield the record without mongo stuff', ->
+          expect(@result).to.deep.equal [
+            {uuid: 'wood', type: 'campfire', token: 'I bet you can\'t jump over it'}
+            {uuid: 'marshmellow', type: 'campfire', token: 'How long can you hold your hand in the fire?'}
+          ]
+
+    describe 'when a record is missing', ->
+      beforeEach (done) ->
+        data =
+          '3205fe0fa790bfe1039f95ba0bba03eec1faa05c': '30f087a9660c39a36cc66cb0e8563f8f5a437bb0'
+          '9c77a994790ddf88bc197b11091643662c999a30': 'd3eea2b92d181957905932ada3c7366d98a316c1'
+
+        @redis.set 'b098a0f435aa7818a057fc4aa21aa0775e74a09e', JSON.stringify(data), done
+
+      beforeEach (done) ->
+        data = uuid: 'wood', type: 'campfire', token: 'I bet you can\'t jump over it'
+        @redis.hset '3205fe0fa790bfe1039f95ba0bba03eec1faa05c', '30f087a9660c39a36cc66cb0e8563f8f5a437bb0', JSON.stringify(data), done
+
+      context 'when all the records exist', ->
+        beforeEach (done) ->
+          @sut.find type: 'campfire', (error, @result) => done error
+
+        it 'should yield the record without mongo stuff', ->
+          expect(@result).to.deep.equal []
+
     describe 'with a projection', ->
       beforeEach (done) ->
         record =
@@ -72,6 +138,27 @@ describe 'Datastore', ->
             {uuid: 'wood', type: 'campfire'}
             {uuid: 'marshmellow', type: 'campfire'}
           ]
+
+        it 'should add to the search cache', (done) ->
+          @redis.get '592e16c142809fcd4f5930e933f79a3980939f49', (error, data) =>
+            return done error if error?
+            expect(JSON.parse data).to.deep.equal {
+              '3205fe0fa790bfe1039f95ba0bba03eec1faa05c': 'bf3c374b834e5a47e7d722e3e05c9e4cd8badc10'
+              '9c77a994790ddf88bc197b11091643662c999a30': '82129b82991f50ee3ae73e2e82d81819cf63f9a7'
+            }
+            done()
+
+        it 'should add to the cache', (done) ->
+          @redis.hget '3205fe0fa790bfe1039f95ba0bba03eec1faa05c', 'bf3c374b834e5a47e7d722e3e05c9e4cd8badc10', (error, data) =>
+            return done error if error?
+            expect(JSON.parse data).to.deep.equal uuid: 'wood', type: 'campfire'
+            done()
+
+        it 'should add the other to the cache', (done) ->
+          @redis.hget '9c77a994790ddf88bc197b11091643662c999a30', '82129b82991f50ee3ae73e2e82d81819cf63f9a7', (error, data) =>
+            return done error if error?
+            expect(JSON.parse data).to.deep.equal uuid: 'marshmellow', type: 'campfire'
+            done()
 
     describe 'when there exists no thing', ->
       beforeEach (done) ->

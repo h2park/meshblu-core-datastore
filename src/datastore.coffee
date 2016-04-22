@@ -1,4 +1,5 @@
 _         = require 'lodash'
+async     = require 'async'
 crypto    = require 'crypto'
 stringify = require 'json-stable-stringify'
 
@@ -8,19 +9,28 @@ class Datastore
     throw new Error('Datastore: requires collection') if _.isEmpty collection
     @db = database.collection collection
 
-  find: (query, projection, callback) =>
+  find: (query, projection, options, callback) =>
+    if _.isFunction options
+      callback ?= options
+      options = undefined
+
     if _.isFunction projection
       callback ?= projection
       projection = undefined
 
     return callback new Error("Datastore: requires query") if _.isEmpty query
+    options ?= {}
     projection ?= {}
     projection._id = false
 
-    cursor = @db.find query, projection
-
-    _.defer => cursor.toArray callback
-    return cursor
+    @_findCacheRecords {query, projection}, (error, data) =>
+      return callback error if error?
+      return callback null, data if data?
+      @db.find query, projection, options, (error, data) =>
+        return callback error if error?
+        @_updateCacheRecords {query, projection, data}, (error) =>
+          return callback error if error?
+          callback null, data
 
   findOne: (query, projection, callback) =>
     if _.isFunction projection
@@ -77,6 +87,36 @@ class Datastore
 
       callback null, data
 
+  _findCacheRecords: ({query, projection}, callback) =>
+    cacheKey = @_generateCacheField {query, projection}
+    return callback() unless cacheKey?
+    @cache.get cacheKey, (error, data) =>
+      return callback error if error?
+      return callback() unless data?
+      try
+        data = JSON.parse(data)
+      catch error
+        return callback()
+
+      return callback() unless data?
+
+      async.map _.keys(data), (key, done) =>
+        value = data[key]
+        @cache.hget key, value, (error, x) =>
+          return done error if error?
+          return done() unless x?
+
+          try
+            x = JSON.parse x
+          catch error
+            return done()
+
+          return done null, x
+      , (error, records) =>
+        return callback error if error?
+        return callback() unless _.size(_.flatten(_.compact(records))) == _.size(data)
+        callback null, records
+
   _updateCacheRecord: ({query, projection, data}, callback) =>
     cacheKey   = @_generateCacheKey {query}
     return callback() unless cacheKey?
@@ -86,6 +126,20 @@ class Datastore
       @cache.expire cacheKey, 60 * 60 * 1000, (error) =>
         # ignore any redis return values
         callback error
+
+  _updateCacheRecords: ({query, projection, data}, callback) =>
+    records = {}
+    async.eachSeries data, (record, done) =>
+      recordCacheKey = @_generateCacheKey {query: record}
+      recordCacheField = @_generateCacheField {query: record, projection}
+      records[recordCacheKey] = recordCacheField if recordCacheKey?
+      @_updateCacheRecord {query: record, projection, data: record}, done
+    , (error) =>
+      return callback error if error?
+      return callback() if _.isEmpty records
+      return callback() unless _.size(data) == _.size(records)
+      cacheKey = @_generateCacheField {query, projection}
+      @cache.setex cacheKey, 60 * 60 * 1000, JSON.stringify(records), callback
 
   _clearCacheRecord: ({query}, callback) =>
     cacheKey = @_generateCacheKey {query}
