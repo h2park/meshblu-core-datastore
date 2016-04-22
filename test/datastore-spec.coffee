@@ -48,8 +48,8 @@ describe 'Datastore', ->
             {uuid: 'marshmellow', type: 'campfire', token: 'How long can you hold your hand in the fire?'}
           ]
 
-        xit 'should add to the search cache', (done) ->
-          @redis.get 'b098a0f435aa7818a057fc4aa21aa0775e74a09e', (error, data) =>
+        it 'should add to the search cache', (done) ->
+          @redis.hget 'query:things', 'b098a0f435aa7818a057fc4aa21aa0775e74a09e', (error, data) =>
             return done error if error?
             expect(JSON.parse data).to.deep.equal {
               '3205fe0fa790bfe1039f95ba0bba03eec1faa05c': '874dbf9e6e84121a057e6ad2b9c047ebc95150f3'
@@ -57,25 +57,25 @@ describe 'Datastore', ->
             }
             done()
 
-        xit 'should add to the cache', (done) ->
+        it 'should add to the cache', (done) ->
           @redis.hget '3205fe0fa790bfe1039f95ba0bba03eec1faa05c', '874dbf9e6e84121a057e6ad2b9c047ebc95150f3', (error, data) =>
             return done error if error?
             expect(JSON.parse data).to.deep.equal uuid: 'wood', type: 'campfire', token: 'I bet you can\'t jump over it'
             done()
 
-        xit 'should add the other to the cache', (done) ->
+        it 'should add the other to the cache', (done) ->
           @redis.hget '9c77a994790ddf88bc197b11091643662c999a30', '2e9fb62f7fe1d2231b4a09f4d172cd808372327c', (error, data) =>
             return done error if error?
             expect(JSON.parse data).to.deep.equal uuid: 'marshmellow', type: 'campfire', token: 'How long can you hold your hand in the fire?'
             done()
 
-    xdescribe 'when a record is already cached', ->
+    describe 'when a record is already cached', ->
       beforeEach (done) ->
         data =
           '3205fe0fa790bfe1039f95ba0bba03eec1faa05c': '9635cce604dbe5de11fe870a88e250115a3bda4d'
           '9c77a994790ddf88bc197b11091643662c999a30': '77e560dbcffbfd744248a6ff9e6d29de2763e35f'
 
-        @redis.set 'b098a0f435aa7818a057fc4aa21aa0775e74a09e', JSON.stringify(data), done
+        @redis.hset 'query:things', 'b098a0f435aa7818a057fc4aa21aa0775e74a09e', JSON.stringify(data), done
 
       beforeEach (done) ->
         data = uuid: 'wood', type: 'campfire', token: 'I bet you can\'t jump over it'
@@ -95,13 +95,13 @@ describe 'Datastore', ->
             {uuid: 'marshmellow', type: 'campfire', token: 'How long can you hold your hand in the fire?'}
           ]
 
-    xdescribe 'when a record is missing', ->
+    describe 'when a record is missing', ->
       beforeEach (done) ->
         data =
           '3205fe0fa790bfe1039f95ba0bba03eec1faa05c': '9635cce604dbe5de11fe870a88e250115a3bda4d'
           '9c77a994790ddf88bc197b11091643662c999a30': '77e560dbcffbfd744248a6ff9e6d29de2763e35f'
 
-        @redis.set 'b098a0f435aa7818a057fc4aa21aa0775e74a09e', JSON.stringify(data), done
+        @redis.hset 'query:things', 'b098a0f435aa7818a057fc4aa21aa0775e74a09e', JSON.stringify(data), done
 
       beforeEach (done) ->
         data = uuid: 'wood', type: 'campfire', token: 'I bet you can\'t jump over it'
@@ -139,8 +139,8 @@ describe 'Datastore', ->
             {uuid: 'marshmellow', type: 'campfire'}
           ]
 
-        xit 'should add to the search cache', (done) ->
-          @redis.get '592e16c142809fcd4f5930e933f79a3980939f49', (error, data) =>
+        it 'should add to the search cache', (done) ->
+          @redis.hget 'query:things', '592e16c142809fcd4f5930e933f79a3980939f49', (error, data) =>
             return done error if error?
             expect(JSON.parse data).to.deep.equal {
               '3205fe0fa790bfe1039f95ba0bba03eec1faa05c': '9635cce604dbe5de11fe870a88e250115a3bda4d'
@@ -148,13 +148,13 @@ describe 'Datastore', ->
             }
             done()
 
-        xit 'should add to the cache', (done) ->
+        it 'should add to the cache', (done) ->
           @redis.hget '3205fe0fa790bfe1039f95ba0bba03eec1faa05c', '9635cce604dbe5de11fe870a88e250115a3bda4d', (error, data) =>
             return done error if error?
             expect(JSON.parse data).to.deep.equal uuid: 'wood', type: 'campfire'
             done()
 
-        xit 'should add the other to the cache', (done) ->
+        it 'should add the other to the cache', (done) ->
           @redis.hget '9c77a994790ddf88bc197b11091643662c999a30', '77e560dbcffbfd744248a6ff9e6d29de2763e35f', (error, data) =>
             return done error if error?
             expect(JSON.parse data).to.deep.equal uuid: 'marshmellow', type: 'campfire'
@@ -253,6 +253,9 @@ describe 'Datastore', ->
   describe '->insert', ->
     describe 'when called with an object', ->
       beforeEach (done) ->
+        @redis.hset 'query:things', 'blah', 'blah', done
+
+      beforeEach (done) ->
         record =
           uuid: 'goose'
           token: 'Duck, duck, DEAD'
@@ -269,8 +272,17 @@ describe 'Datastore', ->
             token: 'Duck, duck, DEAD'
           done()
 
+      it 'should remove the query cache', (done) ->
+        @redis.exists 'query:things', (error, exists) =>
+          return done error if error?
+          expect(exists).to.equal 0
+          done()
+
   describe '->upsert', ->
     describe 'when called with an object', ->
+      beforeEach (done) ->
+        @redis.hset 'query:things', 'blah', 'blah', done
+
       beforeEach (done) ->
         record =
           uuid: 'goose'
@@ -283,6 +295,12 @@ describe 'Datastore', ->
           expect(record).to.containSubset
             uuid: 'goose'
             token: 'Duck, duck, DEAD'
+          done()
+
+      it 'should remove the query cache', (done) ->
+        @redis.exists 'query:things', (error, exists) =>
+          return done error if error?
+          expect(exists).to.equal 0
           done()
 
   describe '->remove', ->

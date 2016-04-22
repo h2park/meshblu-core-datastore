@@ -8,6 +8,7 @@ class Datastore
     throw new Error('Datastore: requires database') if _.isEmpty database
     throw new Error('Datastore: requires collection') if _.isEmpty collection
     @db = database.collection collection
+    @queryCacheKey = "query:#{collection}"
 
   find: (query, projection, options, callback) =>
     if _.isFunction options
@@ -23,18 +24,14 @@ class Datastore
     projection ?= {}
     projection._id = false
 
-    @db.find query, projection, options, (error, data) =>
+    @_findCacheRecords {query, projection}, (error, data) =>
       return callback error if error?
-      callback null, data
-      
-    # @_findCacheRecords {query, projection}, (error, data) =>
-    #   return callback error if error?
-    #   return callback null, data if data?
-    #   @db.find query, projection, options, (error, data) =>
-    #     return callback error if error?
-    #     @_updateCacheRecords {query, projection, data}, (error) =>
-    #       return callback error if error?
-    #       callback null, data
+      return callback null, data if data?
+      @db.find query, projection, options, (error, data) =>
+        return callback error if error?
+        @_updateCacheRecords {query, projection, data}, (error) =>
+          return callback error if error?
+          callback null, data
 
   findOne: (query, projection, callback) =>
     if _.isFunction projection
@@ -56,8 +53,8 @@ class Datastore
           callback null, data
 
   insert: (record, callback) =>
-    @db.insert record, (error, ignored) =>
-      callback error
+    @db.insert record, (error) =>
+      @_clearQueryCache callback
 
   remove: (query, callback) =>
     return callback new Error("Datastore: requires query") if _.isEmpty query
@@ -73,51 +70,31 @@ class Datastore
 
   upsert: (query, data, callback) =>
     return callback new Error("Datastore: requires query") if _.isEmpty query
-    @db.update query, data, {upsert: true}, (error) =>
-      return callback error if error?
-      @_clearCacheRecord {query}, callback
+    @db.findOne query, (error, existingRecord) =>
+      # need to clear cache if there is no match, we're about to insert
+      @_clearQueryCache(->) unless existingRecord?
+      @db.update query, data, {upsert: true}, (error) =>
+        return callback error if error?
+        @_clearCacheRecord {query}, callback
 
   _findCacheRecord: ({query, projection}, callback) =>
     return callback() unless @cache
     cacheKey = @_generateCacheKey {query}
     return callback() unless cacheKey?
     cacheField = @_generateCacheField {query, projection}
-    @cache.hget cacheKey, cacheField, (error, data) =>
-      return callback error if error?
-      try
-        data = JSON.parse data
-      catch error
-        # if it's not valid throw it away
-        data = null
-
-      callback null, data
+    @_getCacheRecord {cacheKey, cacheField}, callback
 
   _findCacheRecords: ({query, projection}, callback) =>
     return callback() unless @cache
-    cacheKey = @_generateCacheField {query, projection}
-    return callback() unless cacheKey?
-    @cache.get cacheKey, (error, data) =>
-      return callback error if error?
-      return callback() unless data?
-      try
-        data = JSON.parse(data)
-      catch error
-        return callback()
-
+    queryCacheField = @_generateCacheField {query, projection}
+    return callback() unless queryCacheField?
+    @_getCacheRecord {cacheKey: @queryCacheKey, cacheField: queryCacheField}, (error, data) =>
       return callback() unless data?
 
-      async.map _.keys(data), (key, done) =>
-        value = data[key]
-        @cache.hget key, value, (error, x) =>
-          return done error if error?
-          return done() unless x?
-
-          try
-            x = JSON.parse x
-          catch error
-            return done()
-
-          return done null, x
+      async.map _.keys(data), (cacheKey, done) =>
+        cacheField = data[cacheKey]
+        return done() unless cacheKey? && cacheField?
+        @_getCacheRecord {cacheKey, cacheField}, done
       , (error, records) =>
         return callback error if error?
         return callback() unless _.size(_.flatten(_.compact(records))) == _.size(data)
@@ -128,11 +105,7 @@ class Datastore
     cacheKey = @_generateCacheKey {query}
     return callback() unless cacheKey?
     cacheField = @_generateCacheField {query, projection}
-    @cache.hset cacheKey, cacheField, JSON.stringify(data), (error) =>
-      return callback error if error?
-      @cache.expire cacheKey, 60 * 60 * 1000, (error) =>
-        # ignore any redis return values
-        callback error
+    @_setCacheRecord {cacheKey, cacheField, data}, callback
 
   _updateCacheRecords: ({query, projection, data}, callback) =>
     return callback() unless @cache
@@ -147,8 +120,8 @@ class Datastore
       return callback error if error?
       return callback() if _.isEmpty records
       return callback() unless _.size(data) == _.size(records)
-      cacheKey = @_generateCacheField {query, projection}
-      @cache.setex cacheKey, 60 * 60 * 1000, JSON.stringify(records), callback
+      queryCacheField = @_generateCacheField {query, projection}
+      @_setCacheRecord {cacheKey: @queryCacheKey, cacheField: queryCacheField, data: records}, callback
 
   _clearCacheRecord: ({query}, callback) =>
     return callback() unless @cache
@@ -156,6 +129,11 @@ class Datastore
     return callback() unless cacheKey?
     @cache.del cacheKey, (error) =>
       # ignore any redis return values
+      callback error
+
+  _clearQueryCache: (callback) =>
+    @cache.del @queryCacheKey, (error) =>
+      # ignore redis callback
       callback error
 
   _generateCacheField: ({query, projection}) =>
@@ -168,5 +146,24 @@ class Datastore
     return unless _.size(_.keys(attributes)) == _.size @cacheAttributes
     cacheKey = stringify(attributes)
     crypto.createHash('sha1').update(cacheKey).digest('hex')
+
+  _getCacheRecord: ({cacheKey, cacheField}, callback) =>
+    @cache.hget cacheKey, cacheField, (error, data) =>
+      return callback error if error?
+      return callback() unless data?
+      try
+        data = JSON.parse data
+      catch error
+        # if it's not valid throw it away
+        data = null
+
+      callback null, data
+
+  _setCacheRecord: ({cacheKey, cacheField, data}, callback) =>
+    @cache.hset cacheKey, cacheField, JSON.stringify(data), (error) =>
+      return callback error if error?
+      @cache.expire cacheKey, 60 * 60 * 1000, (error) =>
+        # ignore any redis return values
+        callback error
 
 module.exports = Datastore
