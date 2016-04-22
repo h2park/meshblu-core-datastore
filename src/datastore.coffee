@@ -34,7 +34,7 @@ class Datastore
 
     @_findCacheRecord {query, projection}, (error, data) =>
       return callback error if error?
-      return callback null, JSON.parse(data) if data?
+      return callback null, data if data?
       @db.findOne query, projection, (error, data) =>
         return callback error if error?
         @_updateCacheRecord {query, projection, data}, (error) =>
@@ -57,11 +57,25 @@ class Datastore
       return callback error if error?
       @_clearCacheRecord {query}, callback
 
+  upsert: (query, data, callback) =>
+    return callback new Error("Datastore: requires query") if _.isEmpty query
+    @db.update query, data, {upsert: true}, (error) =>
+      return callback error if error?
+      @_clearCacheRecord {query}, callback
+
   _findCacheRecord: ({query, projection}, callback) =>
     cacheKey = @_generateCacheKey {query}
     return callback() unless cacheKey?
     cacheField = @_generateCacheField {query, projection}
-    @cache.hget cacheKey, cacheField, callback
+    @cache.hget cacheKey, cacheField, (error, data) =>
+      return callback error if error?
+      try
+        data = JSON.parse data
+      catch error
+        # if it's not valid throw it away
+        data = null
+
+      callback null, data
 
   _updateCacheRecord: ({query, projection, data}, callback) =>
     cacheKey   = @_generateCacheKey {query}
@@ -69,12 +83,16 @@ class Datastore
     cacheField = @_generateCacheField {query, projection}
     @cache.hset cacheKey, cacheField, JSON.stringify(data), (error) =>
       return callback error if error?
-      @cache.expire cacheKey, 60 * 60 * 1000, callback
+      @cache.expire cacheKey, 60 * 60 * 1000, (error) =>
+        # ignore any redis return values
+        callback error
 
   _clearCacheRecord: ({query}, callback) =>
     cacheKey = @_generateCacheKey {query}
     return callback() unless cacheKey?
-    @cache.del cacheKey, callback
+    @cache.del cacheKey, (error) =>
+      # ignore any redis return values
+      callback error
 
   _generateCacheField: ({query, projection}) =>
     cacheField = stringify(query) + stringify(projection || '')

@@ -182,6 +182,22 @@ describe 'Datastore', ->
             token: 'Duck, duck, DEAD'
           done()
 
+  describe '->upsert', ->
+    describe 'when called with an object', ->
+      beforeEach (done) ->
+        record =
+          uuid: 'goose'
+          token: 'Duck, duck, DEAD'
+        @sut.upsert {uuid: 'goose'}, record, (error) => done error
+
+      it 'should store the thing', (done) ->
+        @sut.findOne uuid: 'goose', (error, record) =>
+          return done error if error?
+          expect(record).to.containSubset
+            uuid: 'goose'
+            token: 'Duck, duck, DEAD'
+          done()
+
   describe '->remove', ->
     beforeEach (done) ->
       @redis.hset 'sandbag', 'foo', 'bar', done
