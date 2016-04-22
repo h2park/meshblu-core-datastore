@@ -78,14 +78,14 @@ class Datastore
         @_clearCacheRecord {query}, callback
 
   _findCacheRecord: ({query, projection}, callback) =>
-    return callback() unless @cache
+    return callback() unless @cache?
     cacheKey = @_generateCacheKey {query}
     return callback() unless cacheKey?
     cacheField = @_generateCacheField {query, projection}
     @_getCacheRecord {cacheKey, cacheField}, callback
 
   _findCacheRecords: ({query, projection}, callback) =>
-    return callback() unless @cache
+    return callback() unless @cache?
     queryCacheField = @_generateCacheField {query, projection}
     return callback() unless queryCacheField?
     @_getCacheRecord {cacheKey: @queryCacheKey, cacheField: queryCacheField}, (error, data) =>
@@ -101,14 +101,14 @@ class Datastore
         callback null, records
 
   _updateCacheRecord: ({query, projection, data}, callback) =>
-    return callback() unless @cache
+    return callback() unless @cache?
     cacheKey = @_generateCacheKey {query}
     return callback() unless cacheKey?
     cacheField = @_generateCacheField {query, projection}
     @_setCacheRecord {cacheKey, cacheField, data}, callback
 
   _updateCacheRecords: ({query, projection, data}, callback) =>
-    return callback() unless @cache
+    return callback() unless @cache?
     records = {}
     async.eachSeries data, (record, done) =>
       attributes = _.pick record, @cacheAttributes
@@ -123,7 +123,7 @@ class Datastore
       @_setCacheRecord {cacheKey: @queryCacheKey, cacheField: queryCacheField, data: records}, callback
 
   _clearCacheRecord: ({query}, callback) =>
-    return callback() unless @cache
+    return callback() unless @cache?
     cacheKey = @_generateCacheKey {query}
     return callback() unless cacheKey?
     @cache.del cacheKey, (error) =>
@@ -131,6 +131,7 @@ class Datastore
       callback error
 
   _clearQueryCache: (callback) =>
+    return callback() unless @cache?
     @cache.del @queryCacheKey, (error) =>
       # ignore redis callback
       callback error
@@ -147,6 +148,7 @@ class Datastore
     crypto.createHash('sha1').update(cacheKey).digest('hex')
 
   _getCacheRecord: ({cacheKey, cacheField}, callback) =>
+    return callback() unless @cache?
     @cache.hget cacheKey, cacheField, (error, data) =>
       return callback error if error?
       return callback() unless data?
@@ -159,6 +161,7 @@ class Datastore
       callback null, data
 
   _setCacheRecord: ({cacheKey, cacheField, data}, callback) =>
+    return callback() unless @cache?
     @cache.hset cacheKey, cacheField, JSON.stringify(data), (error) =>
       return callback error if error?
       @cache.expire cacheKey, 60 * 60 * 1000, (error) =>

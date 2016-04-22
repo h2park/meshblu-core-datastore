@@ -1,6 +1,6 @@
 {
   "name": "meshblu-core-datastore",
-  "version": "4.3.0",
+  "version": "4.3.1",
   "description": "Meshblu Datastore",
   "main": "index.js",
   "scripts": {
