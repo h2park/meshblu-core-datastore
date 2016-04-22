@@ -168,6 +168,12 @@ describe 'Datastore', ->
         expect(@result).to.be.empty
         expect(@result).to.be.array
 
+      it 'should add to the search cache', (done) ->
+        @redis.hget 'query:things', '6f6903006fed8fdff009079cf659b624c8a46403', (error, data) =>
+          return done error if error?
+          expect(JSON.parse data).to.deep.equal {}
+          done()
+
   describe '->findOne', ->
     describe 'on a record that exists', ->
       beforeEach (done) ->

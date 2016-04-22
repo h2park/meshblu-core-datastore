@@ -118,7 +118,6 @@ class Datastore
       @_updateCacheRecord {query: attributes, projection: projection, data: record}, done
     , (error) =>
       return callback error if error?
-      return callback() if _.isEmpty records
       return callback() unless _.size(data) == _.size(records)
       queryCacheField = @_generateCacheField {query, projection}
       @_setCacheRecord {cacheKey: @queryCacheKey, cacheField: queryCacheField, data: records}, callback
