@@ -74,6 +74,7 @@ class Datastore
       @_clearCacheRecord {query}, callback
 
   _findCacheRecord: ({query, projection}, callback) =>
+    return callback() unless @cache
     cacheKey = @_generateCacheKey {query}
     return callback() unless cacheKey?
     cacheField = @_generateCacheField {query, projection}
@@ -88,6 +89,7 @@ class Datastore
       callback null, data
 
   _findCacheRecords: ({query, projection}, callback) =>
+    return callback() unless @cache
     cacheKey = @_generateCacheField {query, projection}
     return callback() unless cacheKey?
     @cache.get cacheKey, (error, data) =>
@@ -118,6 +120,7 @@ class Datastore
         callback null, records
 
   _updateCacheRecord: ({query, projection, data}, callback) =>
+    return callback() unless @cache
     cacheKey   = @_generateCacheKey {query}
     return callback() unless cacheKey?
     cacheField = @_generateCacheField {query, projection}
@@ -128,6 +131,7 @@ class Datastore
         callback error
 
   _updateCacheRecords: ({query, projection, data}, callback) =>
+    return callback() unless @cache
     records = {}
     async.eachSeries data, (record, done) =>
       recordCacheKey = @_generateCacheKey {query: record}
@@ -142,6 +146,7 @@ class Datastore
       @cache.setex cacheKey, 60 * 60 * 1000, JSON.stringify(records), callback
 
   _clearCacheRecord: ({query}, callback) =>
+    return callback() unless @cache
     cacheKey = @_generateCacheKey {query}
     return callback() unless cacheKey?
     @cache.del cacheKey, (error) =>
