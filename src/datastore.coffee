@@ -22,6 +22,10 @@ class Datastore
     return callback new Error("Datastore: requires query") if _.isEmpty query
     options ?= {}
     projection ?= {}
+    unless _.isEmpty projection
+      _.each @cacheAttributes, (attribute) =>
+        projection[attribute] = true
+
     projection._id = false
 
     @_findCacheRecords {query, projection}, (error, data) =>
