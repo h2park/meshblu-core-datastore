@@ -57,8 +57,9 @@ class Datastore
           callback null, data
 
   insert: (record, callback) =>
-    @db.insert record, (error) =>
-      @_clearQueryCache callback
+    @db.insert record, (error, ignored) =>
+      callback error
+    # @_clearQueryCache callback
 
   remove: (query, callback) =>
     return callback new Error("Datastore: requires query") if _.isEmpty query
@@ -76,7 +77,7 @@ class Datastore
     return callback new Error("Datastore: requires query") if _.isEmpty query
     @db.findOne query, (error, existingRecord) =>
       # need to clear cache if there is no match, we're about to insert
-      @_clearQueryCache(->) unless existingRecord?
+      # @_clearQueryCache(->) unless existingRecord?
       @db.update query, data, {upsert: true}, (error) =>
         return callback error if error?
         @_clearCacheRecord {query}, callback
@@ -89,6 +90,7 @@ class Datastore
     @_getCacheRecord {cacheKey, cacheField}, callback
 
   _findCacheRecords: ({query, projection}, callback) =>
+    return callback() # Temporarily disabled
     return callback() unless @cache?
     queryCacheField = @_generateCacheField {query, projection}
     return callback() unless queryCacheField?
@@ -112,6 +114,7 @@ class Datastore
     @_setCacheRecord {cacheKey, cacheField, data}, callback
 
   _updateCacheRecords: ({query, projection, data}, callback) =>
+    return callback() # Temporarily disabled
     return callback() unless @cache?
     records = {}
     async.eachSeries data, (record, done) =>
