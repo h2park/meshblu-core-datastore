@@ -58,6 +58,7 @@ class Datastore
 
   insert: (record, callback) =>
     @db.insert record, (error) =>
+      return callback error if error?
       @_clearQueryCache callback
 
   remove: (query, callback) =>
@@ -75,8 +76,9 @@ class Datastore
   upsert: (query, data, callback) =>
     return callback new Error("Datastore: requires query") if _.isEmpty query
     @db.findOne query, (error, existingRecord) =>
+      return callback error if error?
       # need to clear cache if there is no match, we're about to insert
-      @_clearQueryCache(->) unless existingRecord?
+      @_clearQueryCache(@_logError) unless existingRecord?
       @db.update query, data, {upsert: true}, (error) =>
         return callback error if error?
         @_clearCacheRecord {query}, callback
@@ -103,6 +105,10 @@ class Datastore
         return callback error if error?
         return callback() unless _.size(_.flatten(_.compact(records))) == _.size(data)
         callback null, records
+
+  _logError: (error) =>
+    return unless error?
+    console.error 'Error: ', error.message
 
   _updateCacheRecord: ({query, projection, data}, callback) =>
     return callback() unless @cache?
