@@ -18,6 +18,7 @@ describe 'Datastore', ->
       collection: 'things'
       cache: cache
       cacheAttributes: ['uuid']
+      useQueryCache: true
 
     @db = mongojs 'datastore-test', ['things']
     @db.things.remove done

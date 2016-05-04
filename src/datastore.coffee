@@ -4,7 +4,7 @@ crypto    = require 'crypto'
 stringify = require 'json-stable-stringify'
 
 class Datastore
-  constructor: ({database,collection,@cache,@cacheAttributes}) ->
+  constructor: ({database,collection,@cache,@cacheAttributes,@useQueryCache}) ->
     throw new Error('Datastore: requires database') if _.isEmpty database
     throw new Error('Datastore: requires collection') if _.isEmpty collection
     @db = database.collection collection
@@ -91,6 +91,7 @@ class Datastore
     @_getCacheRecord {cacheKey, cacheField}, callback
 
   _findCacheRecords: ({query, projection}, callback) =>
+    return callback() unless @useQueryCache
     return callback() unless @cache?
     queryCacheField = @_generateCacheField {query, projection}
     return callback() unless queryCacheField?
