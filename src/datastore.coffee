@@ -23,8 +23,10 @@ class Datastore
     options ?= {}
     projection ?= {}
     unless _.isEmpty projection
-      _.each @cacheAttributes, (attribute) =>
-        projection[attribute] = true
+      falsey = _.some _.values(projection), (value) => value == false
+      unless falsey
+        _.each @cacheAttributes, (attribute) =>
+          projection[attribute] = true
 
     projection._id = false
 
@@ -45,6 +47,12 @@ class Datastore
     return callback new Error("Datastore: requires query") if _.isEmpty query
 
     projection ?= {}
+    unless _.isEmpty projection
+      falsey = _.some _.values(projection), (value) => value == false
+      unless falsey
+        _.each @cacheAttributes, (attribute) =>
+          projection[attribute] = true
+
     projection._id = false
 
     @_findCacheRecord {query, projection}, (error, data) =>
