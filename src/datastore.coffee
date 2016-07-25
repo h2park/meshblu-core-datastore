@@ -183,7 +183,7 @@ class Datastore
     return callback() unless @cache?
     @cache.hset cacheKey, cacheField, JSON.stringify(data), (error) =>
       return callback error if error?
-      @cache.expire cacheKey, 60 * 60 * 1000, (error) =>
+      @cache.expire cacheKey, 60 * 60, (error) =>
         # ignore any redis return values
         callback error
 
