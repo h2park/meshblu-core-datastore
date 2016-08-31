@@ -5,8 +5,8 @@ stringify = require 'json-stable-stringify'
 
 class Datastore
   constructor: ({database,collection,@cache,@cacheAttributes,@useQueryCache}) ->
-    throw new Error('Datastore: requires database') if _.isEmpty database
-    throw new Error('Datastore: requires collection') if _.isEmpty collection
+    throw new Error('Datastore: requires database') unless database?
+    throw new Error('Datastore: requires collection') unless collection?
     @db = database.collection collection
     @queryCacheKey = "query:#{collection}"
 
