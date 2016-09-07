@@ -8,6 +8,7 @@ class Datastore
     throw new Error('Datastore: requires database') unless database?
     throw new Error('Datastore: requires collection') unless collection?
     @db = database.collection collection
+    @dbRecycle = database.collection "deleted-#{collection}"
     @queryCacheKey = "query:#{collection}"
 
   find: (query, projection, options, callback) =>
@@ -64,10 +65,23 @@ class Datastore
           return callback error if error?
           callback null, data
 
+  findOneRecycled: (query, callback) =>
+    return callback new Error("Datastore: requires query") if _.isEmpty query
+    @dbRecycle.findOne query, callback
+
   insert: (record, callback) =>
     @db.insert record, (error) =>
       return callback error if error?
       @_clearQueryCache callback
+
+  recycle: (query, callback) =>
+    return callback new Error("Datastore: requires query") if _.isEmpty query
+    @db.find query, (error, records) =>
+      async.eachSeries records, (record, next) =>
+        @dbRecycle.insert record, next
+      , (error) =>
+        return callback error if error?
+        @db.remove query, callback
 
   remove: (query, callback) =>
     return callback new Error("Datastore: requires query") if _.isEmpty query

@@ -337,6 +337,39 @@ describe 'Datastore', ->
             expect(exists).to.equal 0
             done()
 
+  describe '->recycle', ->
+    beforeEach (done) ->
+      @redis.hset 'sandbag', 'foo', 'bar', done
+
+    describe 'when there exists a thing', ->
+      beforeEach (done) ->
+        record =
+          uuid: 'sandbag'
+          token: 'This’ll hold that pesky tsunami!'
+        @sut.insert record, done
+
+      describe 'when called with a query', ->
+        beforeEach (done) ->
+          @sut.recycle uuid: 'sandbag', done
+
+        it 'should insert the record into the deleted collection', (done) ->
+          @sut.findOneRecycled uuid: 'sandbag', (error, device) =>
+            return done error if error?
+            expect(device).to.exist
+            done()
+
+        it 'should remove the record', (done) ->
+          @sut.findOne uuid: 'sandbag', (error, device) =>
+            return done error if error?
+            expect(device).not.to.exist
+            done()
+
+        it 'should clear the cache', (done) ->
+          @redis.exists '779f48bb3d0177cb8c61d78e3c0899a5157cdcbd', (error, exists) =>
+            return done error if error?
+            expect(exists).to.equal 0
+            done()
+
   describe '->update', ->
     describe 'when an object exists', ->
       beforeEach (done) ->
