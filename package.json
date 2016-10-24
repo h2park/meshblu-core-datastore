@@ -1,12 +1,12 @@
 {
   "name": "meshblu-core-datastore",
-  "version": "4.8.0",
+  "version": "4.8.1",
   "description": "Meshblu Datastore",
   "main": "index.js",
   "scripts": {
     "test": "mocha",
     "coverage": "nyc npm test",
-    "mocha:json": "env NPM_ENV=test mocha --reporter json > coverage/mocha.json",
+    "mocha:json": "mocha --reporter json > coverage/mocha.json",
     "test:watch": "mocha -w -R mocha-multi --reporter-options spec=-,mocha-osx-reporter=-"
   },
   "repository": {
@@ -25,17 +25,19 @@
   "homepage": "https://github.com/octoblu/meshblu-core-datastore#readme",
   "devDependencies": {
     "@octoblu/redis-ns": "^1.2.2",
-    "chai": "^3.4.0",
-    "chai-subset": "^1.1.0",
+    "chai": "^3.5.0",
+    "chai-subset": "^1.3.0",
+    "coffee-script": "^1.11.1",
+    "env-test": "^1.0.0",
     "fakeredis": "^1.0.3",
     "ioredis": "^1.15.1",
     "meshblu-core-cache": "^1.7.0",
-    "mocha": "^2.3.3",
+    "mocha": "^2.5.3",
     "mocha-multi": "^0.9.1",
     "mocha-osx-reporter": "^0.1.2",
     "mongojs": "^1.4.1",
-    "nyc": "^8.3.0",
-    "sinon": "^1.17.2",
+    "nyc": "^8.3.2",
+    "sinon": "^1.17.6",
     "sinon-chai": "^2.8.0",
     "uuid": "^2.0.2"
   },
