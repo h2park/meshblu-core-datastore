@@ -397,3 +397,34 @@ describe 'Datastore', ->
             return done error if error?
             expect(exists).to.equal 0
             done()
+
+  describe '->findAndUpdate', ->
+    describe 'when an object exists', ->
+      beforeEach (done) ->
+        @redis.hset '9f0f2e3f4d49c05e64727e8993f152f775e1f317', 'foo', 'bar', done
+
+      beforeEach (done) ->
+        @sut.insert uuid: 'hardware', byline: 'Does it grate?', done
+
+      describe 'when called with an object', ->
+        beforeEach (done) ->
+          query  = uuid: 'hardware'
+          update = $set: {byline: 'Lee Press-Ons?'}
+          @sut.findAndUpdate {query, update}, (error, @data) => done error
+
+        it 'should return the previous version of the document', ->
+          expect(@data).to.deep.equal uuid: 'hardware', byline: 'Does it grate?'
+
+        it 'should update the thing', (done) ->
+          @sut.findOne uuid: 'hardware', (error, record) =>
+            return done error if error?
+            expect(record).to.containSubset
+              uuid: 'hardware'
+              byline: 'Lee Press-Ons?'
+            done()
+
+        it 'should clear the cache', (done) ->
+          @redis.exists '9f0f2e3f4d49c05e64727e8993f152f775e1f317', (error, exists) =>
+            return done error if error?
+            expect(exists).to.equal 0
+            done()

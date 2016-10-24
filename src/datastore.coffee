@@ -40,6 +40,22 @@ class Datastore
           return callback error if error?
           callback null, data
 
+  findAndUpdate: ({ query, update, projection }, callback) =>
+    return callback new Error("Datastore: requires query") if _.isEmpty query
+    projection ?= {}
+    unless _.isEmpty projection
+      falsey = _.some _.values(projection), (value) => value == false
+      unless falsey
+        _.each @cacheAttributes, (attribute) =>
+          projection[attribute] = true
+
+    projection._id = false
+    @db.findAndModify { query, update, fields: projection }, (error, result) =>
+      return callback error if error?
+      @_clearCacheRecord {query}, (error) =>
+        return callback error if error?
+        callback null, result
+
   findOne: (query, projection, callback) =>
     if _.isFunction projection
       callback ?= projection
