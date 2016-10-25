@@ -50,7 +50,8 @@ class Datastore
           projection[attribute] = true
 
     projection._id = false
-    @db.findAndModify { query, update, fields: projection }, (error, result) =>
+    sort = {'_id': 1}
+    @db.findAndModify { query, sort, update, fields: projection }, (error, result) =>
       return callback error if error?
       @_clearCacheRecord {query}, (error) =>
         return callback error if error?
