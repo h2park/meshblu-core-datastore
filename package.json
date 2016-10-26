@@ -1,6 +1,6 @@
 {
   "name": "meshblu-core-datastore",
-  "version": "4.8.4",
+  "version": "4.9.0",
   "description": "Meshblu Datastore",
   "main": "index.js",
   "scripts": {
@@ -30,12 +30,12 @@
     "coffee-script": "^1.11.1",
     "env-test": "^1.0.0",
     "fakeredis": "^1.0.3",
-    "ioredis": "^1.15.1",
+    "ioredis": "^2.4.0",
     "meshblu-core-cache": "^1.7.0",
-    "mocha": "^2.5.3",
+    "mocha": "^3.1.2",
     "mocha-multi": "^0.9.1",
     "mocha-osx-reporter": "^0.1.2",
-    "mongojs": "^1.4.1",
+    "mongojs": "^2.4.0",
     "nyc": "^8.3.2",
     "sinon": "^1.17.6",
     "sinon-chai": "^2.8.0",
