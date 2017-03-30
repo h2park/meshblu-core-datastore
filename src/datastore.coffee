@@ -108,9 +108,12 @@ class Datastore
 
   update: (query, data, callback) =>
     return callback new Error("Datastore: requires query") if _.isEmpty query
-    @db.update query, data, (error) =>
+    @db.update query, data, (error, result) =>
       return callback error if error?
-      @_clearCacheRecord {query}, callback
+      return callback null, updated: false if result.nModified == 0
+      @_clearCacheRecord {query}, (error) =>
+        return callback error if error?
+        return callback null, updated: true
 
   upsert: (query, data, callback) =>
     return callback new Error("Datastore: requires query") if _.isEmpty query

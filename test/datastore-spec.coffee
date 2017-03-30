@@ -378,11 +378,11 @@ describe 'Datastore', ->
       beforeEach (done) ->
         @sut.insert uuid: 'hardware', byline: 'Does it grate?', done
 
-      describe 'when called with an object', ->
+      describe 'when called with an object that modifies the device', ->
         beforeEach (done) ->
           query  = uuid: 'hardware'
           update = $set: {byline: 'Lee Press-Ons?'}
-          @sut.update query, update, (error) => done error
+          @sut.update query, update, (error, @result) => done error
 
         it 'should update the thing', (done) ->
           @sut.findOne uuid: 'hardware', (error, record) =>
@@ -397,6 +397,24 @@ describe 'Datastore', ->
             return done error if error?
             expect(exists).to.equal 0
             done()
+
+        it 'should return a updated: true', ->
+          expect(@result.updated).to.be.true
+
+      describe 'when called with an object that does not modify the device', ->
+        beforeEach (done) ->
+          query  = uuid: 'hardware'
+          update = $set: {byline: 'Does it grate?'}
+          @sut.update query, update, (error, @result) => done error
+
+        it 'should not clear the cache', (done) ->
+          @redis.exists '9f0f2e3f4d49c05e64727e8993f152f775e1f317', (error, exists) =>
+            return done error if error?
+            expect(exists).to.equal 1
+            done()
+
+        it 'should return an updated: false', ->
+          expect(@result.updated).to.be.false
 
   describe '->findAndUpdate', ->
     describe 'when an object exists', ->
