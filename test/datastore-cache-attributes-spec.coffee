@@ -1,5 +1,5 @@
+{describe,beforeEach,it,expect} = global
 mongojs   = require 'mongojs'
-async     = require 'async'
 Datastore = require '../src/datastore'
 
 describe 'Datastore cache stuff', ->
@@ -10,7 +10,7 @@ describe 'Datastore cache stuff', ->
       cacheAttributes: ['id', 'jalapId']
 
   describe '->_generateCacheKey', ->
-    context 'when the fields exist', ->
+    describe 'when the fields exist', ->
       beforeEach ->
         query =
           id: 'foo'
@@ -21,7 +21,7 @@ describe 'Datastore cache stuff', ->
       it 'should generate the proper key', ->
         expect(@cacheKey).to.equal '71e52b62d7f35e138983163d679121b5e5123f4d'
 
-  context 'when a field is missing', ->
+  describe 'when a field is missing', ->
     beforeEach ->
       query =
         id: 'foo'

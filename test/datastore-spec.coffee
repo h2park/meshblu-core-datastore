@@ -1,5 +1,5 @@
+{describe,beforeEach,expect,it} = global
 mongojs   = require 'mongojs'
-async     = require 'async'
 Datastore = require '../src/datastore'
 Cache     = require 'meshblu-core-cache'
 redis     = require 'fakeredis'
@@ -86,7 +86,7 @@ describe 'Datastore', ->
         data = uuid: 'marshmellow', type: 'campfire', token: 'How long can you hold your hand in the fire?'
         @redis.hset '9c77a994790ddf88bc197b11091643662c999a30', '77e560dbcffbfd744248a6ff9e6d29de2763e35f', JSON.stringify(data), done
 
-      context 'when all the records exist', ->
+      describe 'when all the records exist', ->
         beforeEach (done) ->
           @sut.find type: 'campfire', (error, @result) => done error
 
@@ -108,7 +108,7 @@ describe 'Datastore', ->
         data = uuid: 'wood', type: 'campfire', token: 'I bet you can\'t jump over it'
         @redis.hset '3205fe0fa790bfe1039f95ba0bba03eec1faa05c', '9635cce604dbe5de11fe870a88e250115a3bda4d', JSON.stringify(data), done
 
-      context 'when all the records exist', ->
+      describe 'when all the records exist', ->
         beforeEach (done) ->
           @sut.find type: 'campfire', (error, @result) => done error
 
