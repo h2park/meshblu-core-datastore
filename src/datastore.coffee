@@ -110,6 +110,7 @@ class Datastore
     return callback new Error("Datastore: requires query") if _.isEmpty query
     @db.update query, data, (error, result) =>
       return callback error if error?
+      console.log JSON.stringify result
       return callback null, updated: false if result.nModified == 0
       @_clearCacheRecord {query}, (error) =>
         return callback error if error?
