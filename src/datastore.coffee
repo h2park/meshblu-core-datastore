@@ -10,7 +10,6 @@ class Datastore
     @ttl ?= 60 * 60
     @db = database.collection collection
     @dbRecycle = database.collection "deleted-#{collection}"
-    @queryCacheKey = "query:#{collection}"
 
   find: (query, projection, options, callback) =>
     if _.isFunction options
@@ -32,14 +31,11 @@ class Datastore
 
     projection._id = false
 
-    @_findCacheRecords {query, projection}, (error, data) =>
+    @db.find query, projection, options, (error, data) =>
       return callback error if error?
-      return callback null, data if data?
-      @db.find query, projection, options, (error, data) =>
+      @_updateCacheRecords {projection, data}, (error) =>
         return callback error if error?
-        @_updateCacheRecords {query, projection, data}, (error) =>
-          return callback error if error?
-          callback null, data
+        callback null, data
 
   findAndUpdate: ({ query, update, projection }, callback) =>
     return callback new Error("Datastore: requires query") if _.isEmpty query
@@ -89,8 +85,7 @@ class Datastore
 
   insert: (record, callback) =>
     @db.insert record, (error) =>
-      return callback error if error?
-      @_clearQueryCache callback
+      callback error
 
   recycle: (query, callback) =>
     return callback new Error("Datastore: requires query") if _.isEmpty query
@@ -118,13 +113,9 @@ class Datastore
 
   upsert: (query, data, callback) =>
     return callback new Error("Datastore: requires query") if _.isEmpty query
-    @db.findOne query, (error, existingRecord) =>
+    @db.update query, data, {upsert: true}, (error) =>
       return callback error if error?
-      # need to clear cache if there is no match, we're about to insert
-      @_clearQueryCache(@_logError) unless existingRecord?
-      @db.update query, data, {upsert: true}, (error) =>
-        return callback error if error?
-        @_clearCacheRecord {query}, callback
+      @_clearCacheRecord {query}, callback
 
   _findCacheRecord: ({query, projection}, callback) =>
     return callback() unless @cache?
@@ -132,23 +123,6 @@ class Datastore
     return callback() unless cacheKey?
     cacheField = @_generateCacheField {query, projection}
     @_getCacheRecord {cacheKey, cacheField}, callback
-
-  _findCacheRecords: ({query, projection}, callback) =>
-    return callback() unless @useQueryCache
-    return callback() unless @cache?
-    queryCacheField = @_generateCacheField {query, projection}
-    return callback() unless queryCacheField?
-    @_getCacheRecord {cacheKey: @queryCacheKey, cacheField: queryCacheField}, (error, data) =>
-      return callback() unless data?
-
-      async.map _.keys(data), (cacheKey, done) =>
-        cacheField = data[cacheKey]
-        return done() unless cacheKey? && cacheField?
-        @_getCacheRecord {cacheKey, cacheField}, done
-      , (error, records) =>
-        return callback error if error?
-        return callback() unless _.size(_.flatten(_.compact(records))) == _.size(data)
-        callback null, records
 
   _logError: (error) =>
     return unless error?
@@ -161,20 +135,16 @@ class Datastore
     cacheField = @_generateCacheField {query, projection}
     @_setCacheRecord {cacheKey, cacheField, data}, callback
 
-  _updateCacheRecords: ({query, projection, data}, callback) =>
+  _updateCacheRecords: ({projection, data}, callback) =>
     return callback() unless @cache?
     records = {}
-    async.eachSeries data, (record, done) =>
+    async.eachLimit data, 100, (record, done) =>
       attributes = _.pick record, @cacheAttributes
       recordCacheKey = @_generateCacheKey {query: attributes}
       recordCacheField = @_generateCacheField {query: attributes, projection: projection}
       records[recordCacheKey] = recordCacheField if recordCacheKey?
       @_updateCacheRecord {query: attributes, projection: projection, data: record}, done
-    , (error) =>
-      return callback error if error?
-      return callback() unless _.size(data) == _.size(records)
-      queryCacheField = @_generateCacheField {query, projection}
-      @_setCacheRecord {cacheKey: @queryCacheKey, cacheField: queryCacheField, data: records}, callback
+    , callback
 
   _clearCacheRecord: ({query}, callback) =>
     return callback() unless @cache?
@@ -182,13 +152,6 @@ class Datastore
     return callback() unless cacheKey?
     @cache.del cacheKey, (error) =>
       # ignore any redis return values
-      callback error
-    return # redis fix
-
-  _clearQueryCache: (callback) =>
-    return callback() unless @cache?
-    @cache.del @queryCacheKey, (error) =>
-      # ignore redis callback
       callback error
     return # redis fix
 
@@ -222,8 +185,7 @@ class Datastore
     return # redis fix
 
   _setExpireRecord: ({cacheKey}, callback) =>
-    @cache.expire cacheKey, @ttl, (error) =>
-      callback error
+    @cache.expire cacheKey, @ttl, (error) => callback error
     return # redis fix
 
   _tryJSON: (str) =>
