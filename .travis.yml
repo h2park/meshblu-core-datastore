@@ -1,8 +1,15 @@
 language: node_js
 node_js:
 - '7'
+sudo: false
 services:
 - mongodb
+addons:
+  apt:
+    sources:
+    - mongodb-3.0-precise
+    packages:
+    - mongodb-org-server
 branches:
   only:
   - /^v[0-9]/
