@@ -4,9 +4,10 @@ crypto    = require 'crypto'
 stringify = require 'json-stable-stringify'
 
 class Datastore
-  constructor: ({database,collection,@cache,@cacheAttributes,@useQueryCache}) ->
+  constructor: ({database,collection,@cache,@cacheAttributes,@useQueryCache,@ttl}) ->
     throw new Error('Datastore: requires database') unless database?
     throw new Error('Datastore: requires collection') unless collection?
+    @ttl ?= 60 * 60
     @db = database.collection collection
     @dbRecycle = database.collection "deleted-#{collection}"
     @queryCacheKey = "query:#{collection}"
@@ -221,8 +222,7 @@ class Datastore
     return # redis fix
 
   _setExpireRecord: ({cacheKey}, callback) =>
-    oneMinute = 60 * 60
-    @cache.expire cacheKey, oneMinute, (error) =>
+    @cache.expire cacheKey, @ttl, (error) =>
       callback error
     return # redis fix
 
