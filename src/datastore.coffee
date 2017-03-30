@@ -109,7 +109,7 @@ class Datastore
   update: (query, data, callback) =>
     return callback new Error("Datastore: requires query") if _.isEmpty query
     @db.update query, data, (error, result) =>
-      return callback error if error?      
+      return callback error if error?
       return callback null, updated: false if result.nModified == 0
       @_clearCacheRecord {query}, (error) =>
         return callback error if error?
@@ -182,12 +182,14 @@ class Datastore
     @cache.del cacheKey, (error) =>
       # ignore any redis return values
       callback error
+    return # redis fix
 
   _clearQueryCache: (callback) =>
     return callback() unless @cache?
     @cache.del @queryCacheKey, (error) =>
       # ignore redis callback
       callback error
+    return # redis fix
 
   _generateCacheField: ({query, projection}) =>
     cacheField = stringify(query) + stringify(projection || '')
@@ -205,20 +207,26 @@ class Datastore
     @cache.hget cacheKey, cacheField, (error, data) =>
       return callback error if error?
       return callback() unless data?
-      try
-        data = JSON.parse data
-      catch error
-        # if it's not valid throw it away
-        data = null
-
-      callback null, data
+      data = @_tryJSON data
+      @_setExpireRecord { cacheKey }, (error) =>
+        return callback error if error?
+        callback null, data
+    return # redis fix
 
   _setCacheRecord: ({cacheKey, cacheField, data}, callback) =>
     return callback() unless @cache?
     @cache.hset cacheKey, cacheField, JSON.stringify(data), (error) =>
       return callback error if error?
-      @cache.expire cacheKey, 60 * 60, (error) =>
-        # ignore any redis return values
-        callback error
+      @_setExpireRecord { cacheKey }, callback
+    return # redis fix
+
+  _setExpireRecord: ({cacheKey}, callback) =>
+    oneMinute = 60 * 60
+    @cache.expire cacheKey, oneMinute, (error) =>
+      callback error
+    return # redis fix
+
+  _tryJSON: (str) =>
+    try return JSON.parse str
 
 module.exports = Datastore

@@ -9,9 +9,9 @@ UUID      = require 'uuid'
 describe 'Datastore', ->
   beforeEach (done) ->
     redisKey = UUID.v4()
-    client = new RedisNS 'datastore:test:things', redis.createClient redisKey
+    client = new RedisNS "datastore:test:things", redis.createClient redisKey
     cache = new Cache {client}
-    @redis = new RedisNS 'datastore:test:things', redis.createClient redisKey
+    @redis = new RedisNS "datastore:test:things", redis.createClient redisKey
 
     @sut = new Datastore
       database:   mongojs('datastore-test')
@@ -22,6 +22,7 @@ describe 'Datastore', ->
 
     @db = mongojs 'datastore-test', ['things']
     @db.things.remove done
+    return # redis fix
 
   describe '->find', ->
     describe 'when there exists a thing', ->
@@ -57,18 +58,21 @@ describe 'Datastore', ->
               '9c77a994790ddf88bc197b11091643662c999a30': '2e9fb62f7fe1d2231b4a09f4d172cd808372327c'
             }
             done()
+          return # redis fix
 
         it 'should add to the cache', (done) ->
           @redis.hget '3205fe0fa790bfe1039f95ba0bba03eec1faa05c', '874dbf9e6e84121a057e6ad2b9c047ebc95150f3', (error, data) =>
             return done error if error?
             expect(JSON.parse data).to.deep.equal uuid: 'wood', type: 'campfire', token: 'I bet you can\'t jump over it'
             done()
+          return # redis fix
 
         it 'should add the other to the cache', (done) ->
           @redis.hget '9c77a994790ddf88bc197b11091643662c999a30', '2e9fb62f7fe1d2231b4a09f4d172cd808372327c', (error, data) =>
             return done error if error?
             expect(JSON.parse data).to.deep.equal uuid: 'marshmellow', type: 'campfire', token: 'How long can you hold your hand in the fire?'
             done()
+          return # redis fix
 
     describe 'when a record is already cached', ->
       beforeEach (done) ->
@@ -77,14 +81,17 @@ describe 'Datastore', ->
           '9c77a994790ddf88bc197b11091643662c999a30': '77e560dbcffbfd744248a6ff9e6d29de2763e35f'
 
         @redis.hset 'query:things', 'b098a0f435aa7818a057fc4aa21aa0775e74a09e', JSON.stringify(data), done
+        return # redis fix
 
       beforeEach (done) ->
         data = uuid: 'wood', type: 'campfire', token: 'I bet you can\'t jump over it'
         @redis.hset '3205fe0fa790bfe1039f95ba0bba03eec1faa05c', '9635cce604dbe5de11fe870a88e250115a3bda4d', JSON.stringify(data), done
+        return # redis fix
 
       beforeEach (done) ->
         data = uuid: 'marshmellow', type: 'campfire', token: 'How long can you hold your hand in the fire?'
         @redis.hset '9c77a994790ddf88bc197b11091643662c999a30', '77e560dbcffbfd744248a6ff9e6d29de2763e35f', JSON.stringify(data), done
+        return # redis fix
 
       describe 'when all the records exist', ->
         beforeEach (done) ->
@@ -103,10 +110,12 @@ describe 'Datastore', ->
           '9c77a994790ddf88bc197b11091643662c999a30': '77e560dbcffbfd744248a6ff9e6d29de2763e35f'
 
         @redis.hset 'query:things', 'b098a0f435aa7818a057fc4aa21aa0775e74a09e', JSON.stringify(data), done
+        return # redis fix
 
       beforeEach (done) ->
         data = uuid: 'wood', type: 'campfire', token: 'I bet you can\'t jump over it'
         @redis.hset '3205fe0fa790bfe1039f95ba0bba03eec1faa05c', '9635cce604dbe5de11fe870a88e250115a3bda4d', JSON.stringify(data), done
+        return # redis fix
 
       describe 'when all the records exist', ->
         beforeEach (done) ->
@@ -148,18 +157,21 @@ describe 'Datastore', ->
               '9c77a994790ddf88bc197b11091643662c999a30': '77e560dbcffbfd744248a6ff9e6d29de2763e35f'
             }
             done()
+          return # redis fix
 
         it 'should add to the cache', (done) ->
           @redis.hget '3205fe0fa790bfe1039f95ba0bba03eec1faa05c', '9635cce604dbe5de11fe870a88e250115a3bda4d', (error, data) =>
             return done error if error?
             expect(JSON.parse data).to.deep.equal uuid: 'wood', type: 'campfire'
             done()
+          return # redis fix
 
         it 'should add the other to the cache', (done) ->
           @redis.hget '9c77a994790ddf88bc197b11091643662c999a30', '77e560dbcffbfd744248a6ff9e6d29de2763e35f', (error, data) =>
             return done error if error?
             expect(JSON.parse data).to.deep.equal uuid: 'marshmellow', type: 'campfire'
             done()
+          return # redis fix
 
     describe 'when there exists no thing', ->
       beforeEach (done) ->
@@ -174,6 +186,7 @@ describe 'Datastore', ->
           return done error if error?
           expect(JSON.parse data).to.deep.equal {}
           done()
+        return # redis fix
 
   describe '->findOne', ->
     describe 'on a record that exists', ->
@@ -196,17 +209,40 @@ describe 'Datastore', ->
           return done error if error?
           expect(JSON.parse data).to.deep.equal uuid: 'sandbag', token: 'This’ll hold that pesky tsunami!'
           done()
+        return # redis fix
+
+      it 'should have the ttl of one minute', (done) ->
+        @redis.ttl '779f48bb3d0177cb8c61d78e3c0899a5157cdcbd', (error, ttl) =>
+          return done error if error?
+          max = 60 * 60
+          min = max - 2
+          expect(ttl).to.be.within(min, max)
+          done()
+        return # redis fix
 
     describe 'record is already cached', ->
-      beforeEach (done) ->
+      beforeEach 'hset', (done) ->
         @redis.hset '779f48bb3d0177cb8c61d78e3c0899a5157cdcbd', 'cfc702c2d593c0667981e3220a271912e456fe61', JSON.stringify('hi': 'there'), done
+        return # redis fix
+
+      beforeEach 'expire it', (done) ->
+        @redis.expire '779f48bb3d0177cb8c61d78e3c0899a5157cdcbd', 5 * 60, done
+        return # redis fix
 
       beforeEach (done) ->
         @sut.findOne uuid: 'sandbag', (error, @result) => done error
 
       it 'should yield the record without mongo stuff', ->
-        expect(@result).to.deep.equal
-          hi: 'there'
+        expect(@result).to.deep.equal { hi: 'there' }
+
+      it 'should extend the cache', (done) ->
+        @redis.ttl '779f48bb3d0177cb8c61d78e3c0899a5157cdcbd', (error, ttl) =>
+          return done error if error?
+          max = 60 * 60
+          min = max - 2
+          expect(ttl).to.be.within(min, max)
+          done()
+        return # redis fix
 
     describe 'on a record that does not exist', ->
       beforeEach (done) ->
@@ -234,6 +270,7 @@ describe 'Datastore', ->
           return done error if error?
           expect(JSON.parse data).to.deep.equal uuid: 'sandbag'
           done()
+        return # redis fix
 
     describe 'with a different projection', ->
       beforeEach (done) ->
@@ -256,11 +293,13 @@ describe 'Datastore', ->
           return done error if error?
           expect(JSON.parse data).to.deep.equal uuid: 'sandbag', spork: 'bork'
           done()
+        return # redis fix
 
   describe '->insert', ->
     describe 'when called with an object', ->
       beforeEach (done) ->
         @redis.hset 'query:things', 'blah', 'blah', done
+        return # redis fix
 
       beforeEach (done) ->
         record =
@@ -284,11 +323,13 @@ describe 'Datastore', ->
           return done error if error?
           expect(exists).to.equal 0
           done()
+        return # redis fix
 
   describe '->upsert', ->
     describe 'when called with an object', ->
       beforeEach (done) ->
         @redis.hset 'query:things', 'blah', 'blah', done
+        return # redis fix
 
       beforeEach (done) ->
         record =
@@ -309,10 +350,12 @@ describe 'Datastore', ->
           return done error if error?
           expect(exists).to.equal 0
           done()
+        return # redis fix
 
   describe '->remove', ->
     beforeEach (done) ->
       @redis.hset 'sandbag', 'foo', 'bar', done
+      return # redis fix
 
     describe 'when there exists a thing', ->
       beforeEach (done) ->
@@ -336,10 +379,12 @@ describe 'Datastore', ->
             return done error if error?
             expect(exists).to.equal 0
             done()
+          return # redis fix
 
   describe '->recycle', ->
     beforeEach (done) ->
       @redis.hset 'sandbag', 'foo', 'bar', done
+      return # redis fix
 
     describe 'when there exists a thing', ->
       beforeEach (done) ->
@@ -369,11 +414,13 @@ describe 'Datastore', ->
             return done error if error?
             expect(exists).to.equal 0
             done()
+          return # redis fix
 
   describe '->update', ->
     describe 'when an object exists', ->
       beforeEach (done) ->
         @redis.hset '9f0f2e3f4d49c05e64727e8993f152f775e1f317', 'foo', 'bar', done
+        return # redis fix
 
       beforeEach (done) ->
         @sut.insert uuid: 'hardware', byline: 'Does it grate?', done
@@ -397,6 +444,7 @@ describe 'Datastore', ->
             return done error if error?
             expect(exists).to.equal 0
             done()
+          return # redis fix
 
         it 'should return a updated: true', ->
           expect(@result.updated).to.be.true
@@ -412,6 +460,7 @@ describe 'Datastore', ->
             return done error if error?
             expect(exists).to.equal 1
             done()
+          return # redis fix
 
         it 'should return an updated: false', ->
           expect(@result.updated).to.be.false
@@ -420,6 +469,7 @@ describe 'Datastore', ->
     describe 'when an object exists', ->
       beforeEach (done) ->
         @redis.hset '9f0f2e3f4d49c05e64727e8993f152f775e1f317', 'foo', 'bar', done
+        return # redis fix
 
       beforeEach (done) ->
         @sut.insert uuid: 'hardware', byline: 'Does it grate?', done
@@ -446,3 +496,4 @@ describe 'Datastore', ->
             return done error if error?
             expect(exists).to.equal 0
             done()
+          return # redis fix
