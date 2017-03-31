@@ -90,11 +90,11 @@ class Datastore
   recycle: (query, callback) =>
     return callback new Error("Datastore: requires query") if _.isEmpty query
     @db.find query, (error, records) =>
-      async.eachSeries records, (record, next) =>
-        @dbRecycle.insert record, next
-      , (error) =>
-        return callback error if error?
-        @db.remove query, callback
+      return callback error if error?
+      async.parallel [
+        async.apply @remove, query
+        async.apply @_recycleRecords, records
+      ], callback
 
   remove: (query, callback) =>
     return callback new Error("Datastore: requires query") if _.isEmpty query
@@ -176,6 +176,11 @@ class Datastore
         return callback error if error?
         callback null, data
     return # redis fix
+
+  _recycleRecords: (records, callback) =>
+    async.eachLimit records, 100, (record, next) =>
+      @dbRecycle.insert record, next
+    , callback
 
   _setCacheRecord: ({cacheKey, cacheField, data}, callback) =>
     return callback() unless @cache?
