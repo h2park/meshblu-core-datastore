@@ -18,7 +18,6 @@ describe 'Datastore', ->
       collection: 'things'
       cache: cache
       cacheAttributes: ['uuid']
-      useQueryCache: true
 
     @db = mongojs 'datastore-test', ['things']
     @db.things.remove done
@@ -162,7 +161,7 @@ describe 'Datastore', ->
 
       it 'should yield a empty array', ->
         expect(@result).to.be.empty
-        expect(@result).to.be.array
+        expect(@result).to.be.an('array')
 
       it 'should NOT add to the search cache', (done) ->
         @redis.hget 'query:things', '6f6903006fed8fdff009079cf659b624c8a46403', (error, data) =>

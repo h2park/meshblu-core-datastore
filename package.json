@@ -13,10 +13,7 @@
     "type": "git",
     "url": "git+https://github.com/octoblu/meshblu-core-datastore.git"
   },
-  "keywords": [
-    "Meshblu",
-    "Datastore"
-  ],
+  "keywords": ["Meshblu", "Datastore"],
   "author": "Octoblu, <serveradmin@octoblu.com> (https://octoblu.com)",
   "license": "MIT",
   "bugs": {
@@ -24,37 +21,30 @@
   },
   "homepage": "https://github.com/octoblu/meshblu-core-datastore#readme",
   "devDependencies": {
-    "@octoblu/redis-ns": "^1.2.2",
-    "chai": "^3.5.0",
+    "@octoblu/redis-ns": "^1.3.1",
+    "chai": "^4.1.2",
     "chai-subset": "^1.3.0",
-    "coffee-script": "^1.11.1",
     "env-test": "^1.0.0",
     "fakeredis": "^2.0.0",
-    "meshblu-core-cache": "^1.7.0",
+    "meshblu-core-cache": "^1.9.1",
     "mocha": "^3.1.2",
-    "mocha-multi": "^0.9.1",
+    "mocha-multi": "^0.11.0",
     "mocha-osx-reporter": "^0.1.2",
-    "mongojs": "^2.4.0",
-    "nyc": "^8.3.2",
-    "sinon": "^1.17.6",
+    "mongojs": "^2.4.1",
+    "nyc": "^11.2.1",
+    "sinon": "^3.3.0",
     "sinon-chai": "^2.8.0",
-    "uuid": "^2.0.2"
+    "uuid": "^3.1.0"
   },
   "dependencies": {
-    "async": "^2.0.0-rc.3",
-    "coffee-script": "^1.10.0",
+    "async": "^2.5.0",
+    "coffee-script": "^1.11.1",
     "json-stable-stringify": "^1.0.1",
     "lodash": "^4.11.1"
   },
   "nyc": {
     "cache": true,
-    "reporter": [
-      "text-summary",
-      "lcov",
-      "json"
-    ],
-    "extension": [
-      ".coffee"
-    ]
+    "reporter": ["text-summary", "lcov", "json"],
+    "extension": [".coffee"]
   }
 }

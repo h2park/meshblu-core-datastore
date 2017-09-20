@@ -4,7 +4,7 @@ crypto    = require 'crypto'
 stringify = require 'json-stable-stringify'
 
 class Datastore
-  constructor: ({database,collection,@cache,@cacheAttributes,@useQueryCache,@ttl}) ->
+  constructor: ({database,collection,@cache,@cacheAttributes,@ttl}) ->
     throw new Error('Datastore: requires database') unless database?
     throw new Error('Datastore: requires collection') unless collection?
     @ttl ?= 60 * 60
